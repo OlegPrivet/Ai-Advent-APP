@@ -19,7 +19,7 @@ fun main() = application {
     val apiKey = "api"
     val client = Http.client(apiKey)
     val service = AiResponsesService(client)
-    val vm = remember { ChatViewModel(service, model = "qwen/qwen3-coder:free") } // пример
+    val vm = remember { ChatViewModel(service, model = "qwen/qwq-32b:free") } // пример
     Window(
         title = "Ai Advent APP",
         state = rememberWindowState(width = 800.dp, height = 600.dp),

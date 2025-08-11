@@ -21,14 +21,20 @@ class ChatViewModel(
 
     fun send(userText: String) {
         val uid = UUID.randomUUID().toString()
-        val userMsg = ChatMessage(uid, userText, false)
+        val userMsg = ChatMessage(uid, text = userText, isGPT = false)
         _state.update { it.copy(messages = it.messages + userMsg, isSending = true, error = null) }
 
         viewModelScope.launch {
             openAi.getReply(model, userText)
-                .onSuccess { text ->
+                .onSuccess { combinedResponse ->
                     _state.update { it.copy(
-                        messages = it.messages + ChatMessage(UUID.randomUUID().toString(), text, true),
+                        messages = it.messages + ChatMessage(
+                            UUID.randomUUID().toString(),
+                            xmlResponse = combinedResponse.xmlResponse,
+                            rawText = combinedResponse.raw,
+                            isGPT = true,
+                            text = ""
+                        ),
                         isSending = false
                     ) }
                 }

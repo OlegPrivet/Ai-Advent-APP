@@ -36,6 +36,9 @@ kotlin {
             implementation(libs.kotlinx.serialization.json)
             implementation(libs.multiplatformSettings)
             implementation(libs.room.runtime)
+
+            implementation("io.github.pdvrieze.xmlutil:core:0.91.2")
+            implementation("io.github.pdvrieze.xmlutil:serialization:0.91.2")
         }
 
         commonTest.dependencies {

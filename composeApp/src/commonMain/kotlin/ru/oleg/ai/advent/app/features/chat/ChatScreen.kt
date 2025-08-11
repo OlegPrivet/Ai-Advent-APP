@@ -1,8 +1,8 @@
 package ru.oleg.ai.advent.app.features.chat
 
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -11,8 +11,10 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.Button
 import androidx.compose.material.Surface
@@ -21,6 +23,7 @@ import androidx.compose.material.TextField
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
@@ -31,6 +34,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import nl.adaptivity.xmlutil.core.impl.multiplatform.StringWriter
+import nl.adaptivity.xmlutil.core.impl.newWriter
+import nl.adaptivity.xmlutil.util.CompactFragment
+import nl.adaptivity.xmlutil.xmlStreaming
 import ru.oleg.ai.advent.app.data.chat.ChatMessage
 import ru.oleg.ai.advent.app.features.chat.vm.ChatViewModel
 
@@ -53,10 +61,16 @@ fun ChatScreen(vm: ChatViewModel) {
 
 @Composable
 fun MessagesList(messages: List<ChatMessage>, modifier: Modifier = Modifier) {
-    LazyColumn(modifier, reverseLayout = true) {
+    val listState = rememberLazyListState()
+    LazyColumn(modifier, state = listState) {
         items(items = messages, key = { it.id }) { msg ->
             MessageBubble(msg)
             Spacer(Modifier.height(8.dp))
+        }
+    }
+    LaunchedEffect(messages.size) {
+        if (messages.isNotEmpty()) {
+            listState.animateScrollToItem(messages.size - 1)
         }
     }
 }
@@ -97,13 +111,70 @@ fun MessageBubble(msg: ChatMessage) {
             shape = RoundedCornerShape(12.dp),
             tonalElevation = 2.dp
         ) {
+            if (!msg.isGPT) {
+                Text(
+                    text = msg.text,
+                    modifier = Modifier.padding(12.dp),
+                    color = Color.White
+                )
+            } else GPTBubble(message = msg, modifier = Modifier.align(align).width(600.dp))
+        }
+    }
+}
+
+@Composable
+fun GPTBubble(message: ChatMessage, modifier: Modifier = Modifier) {
+    Column(modifier = modifier) {
+        message.xmlResponse?.answer?.let {
             Text(
-                text = msg.text,
+                text = it,
                 modifier = Modifier.padding(12.dp),
                 color = Color.White
             )
         }
+
+        message.xmlResponse?.points?.let { points ->
+            Spacer(Modifier.height(16.dp))
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                points.point.forEach { xmlPoint ->
+                    Text(
+                        text = "* $xmlPoint",
+                        modifier = Modifier.padding(horizontal = 12.dp),
+                        color = Color.White
+                    )
+                }
+            }
+        }
+
+        message.xmlResponse?.summary?.let {
+            Spacer(Modifier.height(16.dp))
+            Text(
+                text = it,
+                modifier = Modifier.padding(horizontal = 12.dp),
+                color = Color.White
+            )
+        }
+
+        message.rawText?.let {
+            val formattedText = remember { prettyXml(it) }
+            Spacer(Modifier.height(16.dp))
+            Text(
+                text = formattedText,
+                modifier = Modifier.padding(horizontal = 12.dp),
+                fontSize = 12.sp,
+                color = Color.DarkGray
+            )
+        }
     }
+}
+
+fun prettyXml(input: String, indent: Int = 4): String {
+    val fragment = CompactFragment(input) // оборачиваем строку в XML-фрагмент
+    val writer = StringWriter()
+    val xmlWriter = xmlStreaming.newWriter(writer, repairNamespaces = false)
+    xmlWriter.indent = indent
+    fragment.serialize(xmlWriter)
+    return writer.toString()
 }
 
 @Composable
